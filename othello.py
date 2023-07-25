@@ -338,23 +338,48 @@ def decode_moves(moves):
     tuples = [(move_number + 1, move_alpha, decode_move(move_alpha)) for move_number, move_alpha in enumerate(move_pairs)]
     return tuples
 
+# 1: Black
+# 0: Draw
+# -1: White
+game_name = '1050515'
+game_outcome = -1
 moves = 'd3c5f6f5e6e3d6f7b6d7e2c6d8c4e7c3f4c8c7d2d1a6b3f3b8f8b5f2e8a8b4b7a7a5g3f1g4g5h6a4g6e1b2c1c2h3h4g2g7h2h1a1g1b1a2a3h7h8g8h5'
-decoded_moves = decode_moves(moves)
 
 game = Othello()
 game.initialize_board()
 game.current_player = 0
-game_name = '1050515'
-# 1: Black
-# 0: Draw
-# -1: White
-game_outcome = -1
+decoded_moves = decode_moves(moves)
+
+print(f'Game, Step, Player, Move, Player_Outcome, Board')
 for move_number, move_alpha, move in decoded_moves:
-    print(f'{game_name}, {move_number}, {game.current_player}, {move_alpha}, {game_outcome}, {game.board}')
-    print(f'{move_number}, {game.current_player}, {move_alpha}, {move}')
+
+    # initialize the new lists with zeros
+    black = [[0]*len(row) for row in game.board]
+    white = [[0]*len(row) for row in game.board]
+
+    # populate the new lists
+    for row_index in range(len(game.board)):
+        for col_index in range(len(game.board[row_index])):
+            if game.board[row_index][col_index] == 1:
+                black[row_index][col_index] = 1
+            elif game.board[row_index][col_index] == 2:
+                white[row_index][col_index] = 1
+
+    current_player_name = None
+    if game.current_player == 0:
+        current_player_name = 'Black'
+        player_outcome = game_outcome
+        neural_network_input = [black, white]
+    if game.current_player == 1:
+        current_player_name = 'White'
+        player_outcome = -game_outcome
+        neural_network_input = [white, black]
+    if current_player_name is None:
+        raise ValueError("current_player_name is None")
+
+    print(f'{game_name}, {move_number}, {current_player_name}, {move_alpha}, {player_outcome}, {neural_network_input}')
     game.move = move
     game.make_move()
-    print(game.board)
     game.current_player = 1 - game.current_player
     if not game.has_legal_move():
         game.current_player = 1 - game.current_player
