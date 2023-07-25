@@ -63,7 +63,6 @@ class Othello(Board):
             row = initial_squares[i][0]
             col = initial_squares[i][1]
             self.board[row][col] = color + 1
-            self.draw_tile(initial_squares[i], color)
     
     def make_move(self):
         ''' Method: make_move
@@ -75,11 +74,12 @@ class Othello(Board):
                   tiles), and increases the number of tiles of the current 
                   player by 1.
         '''
-        if self.is_legal_move(self.move):
-            self.board[self.move[0]][self.move[1]] = self.current_player + 1
-            self.num_tiles[self.current_player] += 1
-            self.draw_tile(self.move, self.current_player)
-            self.flip_tiles()
+        if not self.is_legal_move(self.move):
+            raise ValueError(f"Move {self.move} is illegal.")
+
+        self.board[self.move[0]][self.move[1]] = self.current_player + 1
+        self.num_tiles[self.current_player] += 1
+        self.flip_tiles()
     
     def flip_tiles(self):
         ''' Method: flip_tiles
@@ -104,7 +104,6 @@ class Othello(Board):
                         self.board[row][col] = curr_tile
                         self.num_tiles[self.current_player] += 1
                         self.num_tiles[(self.current_player + 1) % 2] -= 1
-                        self.draw_tile((row, col), self.current_player)
                         i += 1
 
     def has_tile_to_flip(self, move, direction):
@@ -322,3 +321,40 @@ class Othello(Board):
         '''
         return Board.__eq__(self, other) and self.current_player == \
         other.current_player
+
+
+def decode_moves(moves):
+
+    # split into pairs
+    move_pairs = [moves[i:i+2].upper() for i in range(0, len(moves), 2)]
+    print(move_pairs)
+
+    def decode_move(move):
+        letter, number = move
+        x = ord(letter) - ord('A')  # 'a' -> 1, 'b' -> 2, ..., 'h' -> 8
+        y = int(number) - 1 # '1' -> 1, '2' -> 2, ..., '8' -> 8
+        return (y, x)
+
+    tuples = [(move_number + 1, move_alpha, decode_move(move_alpha)) for move_number, move_alpha in enumerate(move_pairs)]
+    return tuples
+
+moves = 'd3c5f6f5e6e3d6f7b6d7e2c6d8c4e7c3f4c8c7d2d1a6b3f3b8f8b5f2e8a8b4b7a7a5g3f1g4g5h6a4g6e1b2c1c2h3h4g2g7h2h1a1g1b1a2a3h7h8g8h5'
+decoded_moves = decode_moves(moves)
+
+game = Othello()
+game.initialize_board()
+game.current_player = 0
+game_name = '1050515'
+# 1: Black
+# 0: Draw
+# -1: White
+game_outcome = -1
+for move_number, move_alpha, move in decoded_moves:
+    print(f'{game_name}, {move_number}, {game.current_player}, {move_alpha}, {game_outcome}, {game.board}')
+    print(f'{move_number}, {game.current_player}, {move_alpha}, {move}')
+    game.move = move
+    game.make_move()
+    print(game.board)
+    game.current_player = 1 - game.current_player
+    if not game.has_legal_move():
+        game.current_player = 1 - game.current_player
