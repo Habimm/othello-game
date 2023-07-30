@@ -5,44 +5,91 @@
     November 28, 2018
 '''
 
-import othello_game.score as score
-import turtle, random
-from othello_game.board import Board
+from info import info
+import copy
+import random
+import tensorflow.keras.models
+import turtle
 
-# Define all the possible directions in which a player's move can flip 
-# their adversary's tiles as constant (0 – the current row/column, 
+if __name__ == '__main__':
+    import score as score
+    from board import Board
+else:
+    import othello_game.score as score
+    from othello_game.board import Board
+
+# Define all the possible directions in which a player's move can flip
+# their adversary's tiles as constant (0 – the current row/column,
 # +1 – the next row/column, -1 – the previous row/column)
 MOVE_DIRS = [(-1, -1), (-1, 0), (-1, +1),
              (0, -1),           (0, +1),
              (+1, -1), (+1, 0), (+1, +1)]
 
+
+def index_to_letter(index):
+    return chr(index + ord('a')).upper()
+
+def index_to_number(index):
+    return index + 1
+
+def convert_index_to_chess_notation(index_tuple):
+    # Inverting the indices because of the different convention
+    return index_to_letter(index_tuple[1]) + str(index_to_number(index_tuple[0]))
+
+
+
+def board_to_tensor(board, player):
+    # initialize the new lists with zeros
+    black = [[0]*len(row) for row in board]
+    white = [[0]*len(row) for row in board]
+
+    # populate the new lists
+    for row_index in range(len(board)):
+        for col_index in range(len(board[row_index])):
+            if board[row_index][col_index] == 1:
+                black[row_index][col_index] = 1
+            elif board[row_index][col_index] == 2:
+                white[row_index][col_index] = 1
+
+    if player == 0:
+        neural_network_input = [black, white]
+    if player == 1:
+        neural_network_input = [white, black]
+    return neural_network_input
+
+
+
+
 class Othello(Board):
     ''' Othello class.
-        Attributes: current_player, an integer 0 or 1 to represent two 
+        Attributes: current_player, an integer 0 or 1 to represent two
                     different players (the user and the computer)
-                    num_tiles, a list of integers for number of tiles each 
+                    num_tiles, a list of integers for number of tiles each
                     player has
                     n, an integer for nxn board
                     all other attributes inherited from class Board
         n (integer) is optional in the __init__ function
-        current_player, num_tiles and all other inherited attributes 
+        current_player, num_tiles and all other inherited attributes
         are not taken in the __init__
 
-        Methods: initialize_board, make_move, flip_tiles, has_tile_to_flip, 
-                 has_legal_move, get_legal_moves, is_legal_move, 
-                 is_valid_coord, run, play, make_random_move, 
-                 report_result, __str__ , __eq__ and all other methods 
+        Methods: initialize_board, make_move, flip_tiles, has_tile_to_flip,
+                 has_legal_move, get_legal_moves, is_legal_move,
+                 is_valid_coord, run, play, make_random_move,
+                 report_result, __str__ , __eq__ and all other methods
                  inherited from class Board
     '''
 
-    def __init__(self, n = 8):
+    def __init__(self, n = 8, original=False):
         '''
-            Initilizes the attributes. 
+            Initilizes the attributes.
             Only takes one optional parameter; others have default values.
         '''
         Board.__init__(self, n)
         self.current_player = 0
         self.num_tiles = [2, 2]
+        self.original = original
+        if self.original:
+            self.opponent_model = tensorflow.keras.models.load_model('../generated/othello_model.keras')
 
     def initialize_board(self):
         ''' Method: initialize_board
@@ -58,21 +105,23 @@ class Othello(Board):
         coord2 = int(self.n / 2)
         initial_squares = [(coord1, coord2), (coord1, coord1),
                            (coord2, coord1), (coord2, coord2)]
-        
+
         for i in range(len(initial_squares)):
             color = i % 2
             row = initial_squares[i][0]
             col = initial_squares[i][1]
             self.board[row][col] = color + 1
-    
+            if __name__ == '__main__' and self.original:
+                self.draw_tile(initial_squares[i], color)
+
     def make_move(self):
         ''' Method: make_move
             Parameters: self
             Returns: nothing
-            Does: Draws a tile for the player's next legal move on the 
-                  board and flips the adversary's tiles. Also, updates the 
-                  state of the board (1 for black tiles and 2 for white 
-                  tiles), and increases the number of tiles of the current 
+            Does: Draws a tile for the player's next legal move on the
+                  board and flips the adversary's tiles. Also, updates the
+                  state of the board (1 for black tiles and 2 for white
+                  tiles), and increases the number of tiles of the current
                   player by 1.
         '''
         if not self.is_legal_move(self.move):
@@ -80,19 +129,21 @@ class Othello(Board):
 
         self.board[self.move[0]][self.move[1]] = self.current_player + 1
         self.num_tiles[self.current_player] += 1
+        if __name__ == '__main__' and self.original:
+            self.draw_tile(self.move, self.current_player)
         self.flip_tiles()
-    
+
     def flip_tiles(self):
         ''' Method: flip_tiles
             Parameters: self
             Returns: nothing
-            Does: Flips the adversary's tiles for current move. Also, 
-                  updates the state of the board (1 for black tiles and 
-                  2 for white tiles), increases the number of tiles of 
-                  the current player by 1, and decreases the number of 
+            Does: Flips the adversary's tiles for current move. Also,
+                  updates the state of the board (1 for black tiles and
+                  2 for white tiles), increases the number of tiles of
+                  the current player by 1, and decreases the number of
                   tiles of the adversary by 1.
         '''
-        curr_tile = self.current_player + 1 
+        curr_tile = self.current_player + 1
         for direction in MOVE_DIRS:
             if self.has_tile_to_flip(self.move, direction):
                 i = 1
@@ -105,19 +156,21 @@ class Othello(Board):
                         self.board[row][col] = curr_tile
                         self.num_tiles[self.current_player] += 1
                         self.num_tiles[(self.current_player + 1) % 2] -= 1
+                        if __name__ == '__main__' and self.original:
+                            self.draw_tile((row, col), self.current_player)
                         i += 1
 
     def has_tile_to_flip(self, move, direction):
         ''' Method: has_tile_to_flip
             Parameters: self, move (tuple), direction (tuple)
-            Returns: boolean 
+            Returns: boolean
                      (True if there is any tile to flip, False otherwise)
             Does: Checks whether the player has any adversary's tile to flip
                   with the move they make.
 
-                  About input: move is the (row, col) coordinate of where the 
-                  player makes a move; direction is the direction in which the 
-                  adversary's tile is to be flipped (direction is any tuple 
+                  About input: move is the (row, col) coordinate of where the
+                  player makes a move; direction is the direction in which the
+                  adversary's tile is to be flipped (direction is any tuple
                   defined in MOVE_DIRS).
         '''
         i = 1
@@ -139,9 +192,9 @@ class Othello(Board):
     def has_legal_move(self):
         ''' Method: has_legal_move
             Parameters: self
-            Returns: boolean 
+            Returns: boolean
                      (True if the player has legal move, False otherwise)
-            Does: Checks whether the current player has any legal move 
+            Does: Checks whether the current player has any legal move
                   to make.
         '''
         for row in range(self.n):
@@ -150,7 +203,7 @@ class Othello(Board):
                 if self.is_legal_move(move):
                     return True
         return False
-    
+
     def get_legal_moves(self):
         ''' Method: get_legal_moves
             Parameters: self
@@ -197,13 +250,13 @@ class Othello(Board):
             Parameters: self
             Returns: nothing
             Does: Starts the game, sets the user to be the first player,
-                  and then alternate back and forth between the user and 
+                  and then alternate back and forth between the user and
                   the computer until the game is over.
         '''
         if self.current_player not in (0, 1):
             print('Error: unknown player. Quit...')
             return
-        
+
         self.current_player = 0
         print('Your turn.')
         turtle.onscreenclick(self.play)
@@ -214,17 +267,17 @@ class Othello(Board):
             Parameters: self, x (float), y (float)
             Returns: nothing
             Does: Plays alternately between the user's turn and the computer's
-                  turn. The user plays the first turn. For the user's turn, 
-                  gets the user's move by their click on the screen, and makes 
-                  the move if it is legal; otherwise, waits indefinitely for a 
-                  legal move to make. For the computer's turn, just makes a 
+                  turn. The user plays the first turn. For the user's turn,
+                  gets the user's move by their click on the screen, and makes
+                  the move if it is legal; otherwise, waits indefinitely for a
+                  legal move to make. For the computer's turn, just makes a
                   random legal move. If one of the two players (user/computer)
-                  does not have a legal move, switches to another player's 
-                  turn. When both of them have no more legal moves or the 
-                  board is full, reports the result, saves the user's score 
+                  does not have a legal move, switches to another player's
+                  turn. When both of them have no more legal moves or the
+                  board is full, reports the result, saves the user's score
                   and ends the game.
 
-                  About the input: (x, y) are the coordinates of where 
+                  About the input: (x, y) are the coordinates of where
                   the user clicks.
         '''
         # Play the user's turn
@@ -241,13 +294,13 @@ class Othello(Board):
             self.current_player = 1
             if self.has_legal_move():
                 print('Computer\'s turn.')
-                self.make_random_move()
+                self.make_move_with_best_value()
                 self.current_player = 0
-                if self.has_legal_move():  
+                if self.has_legal_move():
                     break
             else:
                 break
-        
+
         # Switch back to the user's turn
         self.current_player = 0
 
@@ -269,7 +322,7 @@ class Othello(Board):
         else:
             print('Your turn.')
             turtle.onscreenclick(self.play)
-        
+
     def make_random_move(self):
         ''' Method: make_random_move
             Parameters: self
@@ -281,6 +334,42 @@ class Othello(Board):
             self.move = random.choice(moves)
             self.make_move()
 
+    def make_move_with_best_value(self):
+        ''' Method: make_random_move
+            Parameters: self
+            Returns: nothing
+            Does: Makes a random legal move on the board.
+        '''
+        moves = self.get_legal_moves()
+        if not moves: return
+
+        move_board_tensors = []
+        for move in moves:
+
+            # Create the board, which we want to evaluate.
+            game = Othello()
+            game.board = copy.deepcopy(self.board)
+            game.current_player = copy.deepcopy(self.current_player)
+            game.num_tiles = copy.deepcopy(self.num_tiles)
+            game.move = move
+            game.make_move()
+            game.current_player = 1 - game.current_player
+            move_board_tensor = board_to_tensor(game.board, game.current_player)
+            move_board_tensors.append(move_board_tensor)
+
+        # These evaluate the outcome from the other player's perspective.
+        # This means, that we want to this outcome ideally to be -1:
+        # We want to MINIMIZE this outcome.
+        evaluations = self.opponent_model.predict(move_board_tensors)
+        move_index = evaluations.argmin()
+        mapping = {}
+        for move, evaluation in zip(moves, evaluations):
+            move_alpha = convert_index_to_chess_notation(move)
+            mapping[move_alpha] = evaluation[0]
+        print(mapping)
+        self.move = moves[move_index]
+        self.make_move()
+
     def report_result(self):
         ''' Method: report_result
             Parameters: self
@@ -291,18 +380,18 @@ class Othello(Board):
         print('GAME OVER!!')
         if self.num_tiles[0] > self.num_tiles[1]:
             print('YOU WIN!!',
-                  'You have %d tiles, but the computer only has %d!' 
+                  'You have %d tiles, but the computer only has %d!'
                   % (self.num_tiles[0], self.num_tiles[1]))
         elif self.num_tiles[0] < self.num_tiles[1]:
             print('YOU LOSE...',
-                  'The computer has %d tiles, but you only have %d :(' 
+                  'The computer has %d tiles, but you only have %d :('
                   % (self.num_tiles[1], self.num_tiles[0]))
         else:
             print("IT'S A TIE!! There are %d of each!" % self.num_tiles[0])
-    
+
     def __str__(self):
-        ''' 
-            Returns a printable version of the current status of the 
+        '''
+            Returns a printable version of the current status of the
             game to print.
         '''
         player_str = 'Current player: ' + str(self.current_player + 1) + '\n'
@@ -316,9 +405,23 @@ class Othello(Board):
 
     def __eq__(self, other):
         '''
-            Compares two instances. 
-            Returns True if they have both the same board attribute and 
+            Compares two instances.
+            Returns True if they have both the same board attribute and
             current player, False otherwise.
         '''
         return Board.__eq__(self, other) and self.current_player == \
         other.current_player
+
+
+
+if __name__ == '__main__':
+    # Initializes the game
+    game = Othello(original=True)
+    game.draw_board()
+    game.initialize_board()
+
+    # Starts playing the game
+    # The user makes a move by clicking one of the squares on the board
+    # The computer makes a random legal move every time
+    # Game is over when there are no more lagal moves or the board is full
+    game.run()
