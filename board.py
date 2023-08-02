@@ -36,7 +36,7 @@ class Board:
                  __str__ and __eq__
     '''
 
-    def __init__(self, n):
+    def __init__(self, n, should_draw_tiles=False):
         ''' 
             Initilizes the attributes. 
             Only takes one required parameter; others have default values.
@@ -58,6 +58,9 @@ class Board:
             Does: Draws an nxn board. Color of the board and lines are set 
                   to self.board_color and self.line_color respectively.
         '''
+
+        if not self.should_draw_tiles: return
+
         turtle.setup(self.n * self.square_size + self.square_size, 
                     self.n * self.square_size + self.square_size)
         turtle.screensize(self.n * self.square_size, self.n * self.square_size)

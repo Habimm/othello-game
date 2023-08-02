@@ -5,18 +5,13 @@
     November 28, 2018
 '''
 
-from info import info
 import copy
 import random
 import tensorflow.keras.models
 import turtle
 
-if __name__ == '__main__':
-    import score as score
-    from board import Board
-else:
-    import othello_game.score as score
-    from othello_game.board import Board
+import rules.score as score
+from rules.board import Board
 
 # Define all the possible directions in which a player's move can flip
 # their adversary's tiles as constant (0 – the current row/column,
@@ -24,7 +19,6 @@ else:
 MOVE_DIRS = [(-1, -1), (-1, 0), (-1, +1),
              (0, -1),           (0, +1),
              (+1, -1), (+1, 0), (+1, +1)]
-
 
 def index_to_letter(index):
     return chr(index + ord('a')).upper()
@@ -35,8 +29,6 @@ def index_to_number(index):
 def convert_index_to_chess_notation(index_tuple):
     # Inverting the indices because of the different convention
     return index_to_letter(index_tuple[1]) + str(index_to_number(index_tuple[0]))
-
-
 
 def board_to_tensor(board, player):
     # initialize the new lists with zeros
@@ -79,17 +71,16 @@ class Othello(Board):
                  inherited from class Board
     '''
 
-    def __init__(self, n = 8, original=False):
+    def __init__(self, n = 8, should_draw_tiles=False):
         '''
             Initilizes the attributes.
             Only takes one optional parameter; others have default values.
         '''
-        Board.__init__(self, n)
+        Board.__init__(self, n, should_draw_tiles)
         self.current_player = 0
         self.num_tiles = [2, 2]
-        self.original = original
-        if self.original:
-            self.opponent_model = tensorflow.keras.models.load_model('../generated/othello_model.keras')
+        self.should_draw_tiles = should_draw_tiles
+        self.opponent_model = tensorflow.keras.models.load_model('generated/othello_model.keras')
 
     def initialize_board(self):
         ''' Method: initialize_board
@@ -111,7 +102,7 @@ class Othello(Board):
             row = initial_squares[i][0]
             col = initial_squares[i][1]
             self.board[row][col] = color + 1
-            if __name__ == '__main__' and self.original:
+            if self.should_draw_tiles:
                 self.draw_tile(initial_squares[i], color)
 
     def make_move(self):
@@ -129,7 +120,7 @@ class Othello(Board):
 
         self.board[self.move[0]][self.move[1]] = self.current_player + 1
         self.num_tiles[self.current_player] += 1
-        if __name__ == '__main__' and self.original:
+        if self.should_draw_tiles:
             self.draw_tile(self.move, self.current_player)
         self.flip_tiles()
 
@@ -156,7 +147,7 @@ class Othello(Board):
                         self.board[row][col] = curr_tile
                         self.num_tiles[self.current_player] += 1
                         self.num_tiles[(self.current_player + 1) % 2] -= 1
-                        if __name__ == '__main__' and self.original:
+                        if self.should_draw_tiles:
                             self.draw_tile((row, col), self.current_player)
                         i += 1
 
@@ -411,17 +402,3 @@ class Othello(Board):
         '''
         return Board.__eq__(self, other) and self.current_player == \
         other.current_player
-
-
-
-if __name__ == '__main__':
-    # Initializes the game
-    game = Othello(original=True)
-    game.draw_board()
-    game.initialize_board()
-
-    # Starts playing the game
-    # The user makes a move by clicking one of the squares on the board
-    # The computer makes a random legal move every time
-    # Game is over when there are no more lagal moves or the board is full
-    game.run()
