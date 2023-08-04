@@ -71,7 +71,7 @@ class Othello(Board):
                  inherited from class Board
     '''
 
-    def __init__(self, n = 8, should_draw_tiles=False):
+    def __init__(self, n = 8, should_draw_tiles=False, model_path='generated/othello_model.keras'):
         '''
             Initilizes the attributes.
             Only takes one optional parameter; others have default values.
@@ -80,7 +80,8 @@ class Othello(Board):
         self.current_player = 0
         self.num_tiles = [2, 2]
         self.should_draw_tiles = should_draw_tiles
-        self.opponent_model = tensorflow.keras.models.load_model('generated/othello_model.keras')
+        if model_path:
+            self.opponent_model = tensorflow.keras.models.load_model(model_path)
 
     def initialize_board(self):
         ''' Method: initialize_board
@@ -285,7 +286,7 @@ class Othello(Board):
             self.current_player = 1
             if self.has_legal_move():
                 print('Computer\'s turn.')
-                self.make_move_with_best_value()
+                self.make_random_move()
                 self.current_player = 0
                 if self.has_legal_move():
                     break
@@ -324,6 +325,7 @@ class Othello(Board):
         if moves:
             self.move = random.choice(moves)
             self.make_move()
+        return self.move
 
     def make_move_with_best_value(self):
         ''' Method: make_random_move
@@ -360,6 +362,7 @@ class Othello(Board):
         print(mapping)
         self.move = moves[move_index]
         self.make_move()
+        return self.move
 
     def report_result(self):
         ''' Method: report_result

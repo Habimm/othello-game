@@ -9,7 +9,7 @@ import othello
 
 def main():
     # Initializes the game
-    game = othello.Othello()
+    game = othello.Othello(should_draw_tiles=True)
     game.draw_board()
     game.initialize_board()
 
