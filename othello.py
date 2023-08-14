@@ -71,7 +71,7 @@ class Othello(Board):
                  inherited from class Board
     '''
 
-    def __init__(self, n = 8, should_draw_tiles=False, model_path='generated/othello_model.keras'):
+    def __init__(self, n = 8, should_draw_tiles=False, model_path=None):
         '''
             Initilizes the attributes.
             Only takes one optional parameter; others have default values.
@@ -353,13 +353,12 @@ class Othello(Board):
         # These evaluate the outcome from the other player's perspective.
         # This means, that we want to this outcome ideally to be -1:
         # We want to MINIMIZE this outcome.
-        evaluations = self.opponent_model.predict(move_board_tensors)
+        evaluations = self.opponent_model.predict(move_board_tensors, verbose=0)
         move_index = evaluations.argmin()
         mapping = {}
         for move, evaluation in zip(moves, evaluations):
             move_alpha = convert_index_to_chess_notation(move)
             mapping[move_alpha] = evaluation[0]
-        print(mapping)
         self.move = moves[move_index]
         self.make_move()
         return self.move
